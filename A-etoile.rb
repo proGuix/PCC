@@ -4,7 +4,7 @@ pts=[]
 def formatPt(pt)
   ptFmt=pt.clone
   ptFmt[0]=(ptFmt[0]*596)/7000
-  ptFmt[1]=(ptFmt[1]*391)/3000
+  ptFmt[1]=(ptFmt[1]*255)/3000
   return ptFmt
 end
   
@@ -12,7 +12,7 @@ def formatPts(pts)
   ptsFmt = pts.clone
   ptsFmt.each do |pt|
     pt[0]=(pt[0]*596)/7000
-    pt[1]=(pt[1]*391)/3000
+    pt[1]=(pt[1]*255)/3000
   end
   return ptsFmt
 end
