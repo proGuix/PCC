@@ -1,71 +1,71 @@
 PositiveInfinity = +1.0/0.0
 
 def main
-  ptVaisseau=[]
+  ptVaisseau={}
   pts=[]
   
   def formatPt(pt)
     ptFmt=pt.clone
-    ptFmt[0]=(ptFmt[0]*596)/7000
-    ptFmt[1]=(ptFmt[1]*255)/3000
+    ptFmt[:x]=(ptFmt[:x]*596)/7000
+    ptFmt[:y]=(ptFmt[:y]*255)/3000
     return ptFmt
   end
   
   def formatPts(pts)
     ptsFmt = pts.clone
     ptsFmt.each do |pt|
-      pt[0]=(pt[0]*596)/7000
-      pt[1]=(pt[1]*255)/3000
+      pt[:x]=(pt[:x]*596)/7000
+      pt[:y]=(pt[:y]*255)/3000
     end
     return ptsFmt
   end
 
   if ARGV[0].to_i==0
-    ptVaisseau=[6500,2600]
+    ptVaisseau={x:6500,y:2600}
     
-    pts.push([0, 450])
-    pts.push([300, 750])
-    pts.push([1000, 450])
-    pts.push([1500, 650])
-    pts.push([1800, 850])
-    pts.push([2000, 1950])
-    pts.push([2200, 1850])
-    pts.push([2400, 2000])
-    pts.push([3100, 1800])
-    pts.push([3150, 1550])
-    pts.push([2500, 1600])
-    pts.push([2200, 1550])
-    pts.push([2100, 750])
-    pts.push([2200, 150])
-    pts.push([3200, 150])
-    pts.push([3500, 450])
-    pts.push([4000, 950])
-    pts.push([4500, 1450])
-    pts.push([5000, 1550])
-    pts.push([5500, 1500])
-    pts.push([6000, 950])
-    pts.push([6999, 1750])
+    pts << {x:0,y:450}
+    pts << {x:300,y:750}
+    pts << {x:1000,y:450}
+    pts << {x:1500,y:650}
+    pts << {x:1800,y:850}
+    pts << {x:2000,y:1950}
+    pts << {x:2200,y:1850}
+    pts << {x:2400,y:2000}
+    pts << {x:3100,y:1800}
+    pts << {x:3150,y:1550}
+    pts << {x:2500,y:1600}
+    pts << {x:2200,y:1550}
+    pts << {x:2100,y:750}
+    pts << {x:2200,y:150}
+    pts << {x:3200,y:150}
+    pts << {x:3500,y:450}
+    pts << {x:4000,y:950}
+    pts << {x:4500,y:1450}
+    pts << {x:5000,y:1550}
+    pts << {x:5500,y:1500}
+    pts << {x:6000,y:950}
+    pts << {x:6999,y:1750}
   else
-    ptVaisseau=[6500,2000]
+    ptVaisseau={x:6500,y:2000}
 
-    pts.push([0,1800])
-    pts.push([300,1200])
-    pts.push([1000,1550])
-    pts.push([2000,1200])
-    pts.push([2500,1650])
-    pts.push([3700,220])
-    pts.push([4700,220])
-    pts.push([4750,1000])
-    pts.push([4700,1650])
-    pts.push([4000,1700])
-    pts.push([3700,1600])
-    pts.push([3750,1900])
-    pts.push([4000,2100])
-    pts.push([4900,2050])
-    pts.push([5100,1000])
-    pts.push([5500,500])
-    pts.push([6200,800])
-    pts.push([6999,600])
+    pts << {x:0,y:1800}
+    pts << {x:300,y:1200}
+    pts << {x:1000,y:1550}
+    pts << {x:2000,y:1200}
+    pts << {x:2500,y:1650}
+    pts << {x:3700,y:220}
+    pts << {x:4700,y:220}
+    pts << {x:4750,y:1000}
+    pts << {x:4700,y:1650}
+    pts << {x:4000,y:1700}
+    pts << {x:3700,y:1600}
+    pts << {x:3750,y:1900}
+    pts << {x:4000,y:2100}
+    pts << {x:4900,y:2050}
+    pts << {x:5100,y:1000}
+    pts << {x:5500,y:500}
+    pts << {x:6200,y:800}
+    pts << {x:6999,y:600}
   end
 
   open('A-etoile.ps', 'w') { |f|
@@ -75,12 +75,12 @@ def main
     f.puts "3 setlinewidth"
     ptsFmt=formatPts(pts)
     ptsFmt.each_cons(2) do |pt1, pt2|
-      f.puts "#{pt1[0]} #{pt1[1]} moveto"
-      f.puts "#{pt2[0]} #{pt2[1]} lineto"
+      f.puts "#{pt1[:x]} #{pt1[:y]} moveto"
+      f.puts "#{pt2[:x]} #{pt2[:y]} lineto"
       f.puts "stroke"
     end
     ptVaisFmt = formatPt(ptVaisseau)
-    f.puts "#{ptVaisFmt[0]} #{ptVaisFmt[1]} 3 0 360 arc"
+    f.puts "#{ptVaisFmt[:x]} #{ptVaisFmt[:y]} 3 0 360 arc"
     f.puts "fill"
     f.puts "stroke"  
   }
@@ -91,7 +91,7 @@ def main
   i=0
   50.times{
     open('A-etoile.ps', 'a') { |f|
-      f.puts "#{ptVaisFmt[0]-i} #{ptVaisFmt[1]} 3 0 360 arc"
+      f.puts "#{ptVaisFmt[:x]-i} #{ptVaisFmt[:y]} 3 0 360 arc"
       f.puts "fill"
       f.puts "stroke"
     }
@@ -112,7 +112,7 @@ def distance(e1,e2)
   Math.sqrt((e1[:x]-e2[:x])**2+(e1[:y]-e2[:y])**2)
 end
 
-def neighs(e)
+def neighbors(e)
   tNeigh=[]
   tNeigh<<{x:e[:x],y:e[:y]+1}
   tNeigh<<{x:e[:x],y:e[:y]-1}
@@ -161,20 +161,24 @@ def segment(tPt1, tPt2)
   tSegment=[]
   tPtI=[]
   tPtF=[]
-  if tPt2[:x]>tPt1[:x]
+  if tPt2[:x]>tPt1[:x] || (tPt2[:x]==tPt1[:x] && tPt2[:y]>tPt1[:y])
     tPtI=tPt1.clone
     tPtF=tPt2.clone
   else
     tPtI=tPt2.clone
     tPtF=tPt1.clone
   end
-  nDX=tPtF[:x]-tPtI[:x]
-  nDY=tPtF[:y]-tPtI[:y]
-  nCoef=nDY.to_f/nDX.to_f
-  STDERR.puts tPt1[:x]
-  STDERR.puts tPt2[:x]
-  for i in tPtI[:x]..tPtF[:x] do
-    tSegment<< {x:i,y:(i*nCoef).round}
+  if tPtI[:x]!=tPtF[:x]
+    nDX=tPtF[:x]-tPtI[:x]
+    nDY=tPtF[:y]-tPtI[:y]
+    nCoef=nDY.to_f/nDX.to_f
+    for i in tPtI[:x]..tPtF[:x] do
+      tSegment<< {x:i,y:tPtI[:y]+((i-tPtI[:x])*nCoef).round}
+    end
+  else
+    for i in tPtI[:y]..tPtF[:y] do
+      tSegment<< {x:tPtI[:x],y:i}
+    end
   end
   return tSegment
 end
@@ -187,6 +191,15 @@ def initGraph(tSurface, tBord)
   return tGraph
 end
 
+def border
+  bord=[]
+  bord+=segment({x:0,y:0},{x:596,y:0})
+  bord+=segment({x:596,y:0},{x:596,y:255})
+  bord+=segment({x:596,y:255},{x:0,y:255})
+  bord+=segment({x:0,y:255},{x:0,y:0})
+  return bord
+end
+
 q = NaivePriorityQueue.new
 q<<{x:7,y:1,cost:0,heuristic:3}
 q<<{x:5,y:3,cost:0,heuristic:8}
@@ -197,7 +210,7 @@ p q.findWithCostInf({x:6,y:2,cost:0,heuristic:2})
 p q.find({x:6,y:3,cost:-1,heuristic:2})
 p distance({x:7,y:1,cost:0,heuristic:3}, {x:5,y:3,cost:0,heuristic:8})
 p q.empty?
-p neighs({x:3,y:7})
+p neighbors({x:3,y:7})
 
 tFather={}
 tFather[{x:7,y:13}]={x:0,y:0}
@@ -205,3 +218,5 @@ tFather[{x:3,y:7}]={x:7,y:13}
 p reconstructPath(tFather, {x:3,y:7})
 
 p segment({x:-5,y:3},{x:-2,y:-3})
+#p border
+p segment({x:0,y:0},{x:1,y:255})
