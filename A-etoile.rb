@@ -1,3 +1,5 @@
+PositiveInfinity = +1.0/0.0
+
 def main
   ptVaisseau=[]
   pts=[]
@@ -125,9 +127,10 @@ end
 
 def reconstructPath(tFather,e)
   tPath=[]
+  tPath << e
   while tFather.include?(e)
     e=tFather[e]
-    tPath << e
+    tPath.unshift e
   end
   return tPath
 end
@@ -154,6 +157,36 @@ class NaivePriorityQueue
   end
 end
 
+def segment(tPt1, tPt2)
+  tSegment=[]
+  tPtI=[]
+  tPtF=[]
+  if tPt2[:x]>tPt1[:x]
+    tPtI=tPt1.clone
+    tPtF=tPt2.clone
+  else
+    tPtI=tPt2.clone
+    tPtF=tPt1.clone
+  end
+  nDX=tPtF[:x]-tPtI[:x]
+  nDY=tPtF[:y]-tPtI[:y]
+  nCoef=nDY.to_f/nDX.to_f
+  STDERR.puts tPt1[:x]
+  STDERR.puts tPt2[:x]
+  for i in tPtI[:x]..tPtF[:x] do
+    tSegment<< {x:i,y:(i*nCoef).round}
+  end
+  return tSegment
+end
+
+def initGraph(tSurface, tBord)
+  tGraph=[]
+  tSurface.each do |pt|
+
+  end
+  return tGraph
+end
+
 q = NaivePriorityQueue.new
 q<<{x:7,y:1,cost:0,heuristic:3}
 q<<{x:5,y:3,cost:0,heuristic:8}
@@ -166,6 +199,9 @@ p distance({x:7,y:1,cost:0,heuristic:3}, {x:5,y:3,cost:0,heuristic:8})
 p q.empty?
 p neighs({x:3,y:7})
 
-tFather=[]
-tFather<< {{x:3,y:7}=>{x:7,y:13}}
-p reconstructPath(tFather, {x:7,y:13})
+tFather={}
+tFather[{x:7,y:13}]={x:0,y:0}
+tFather[{x:3,y:7}]={x:7,y:13}
+p reconstructPath(tFather, {x:3,y:7})
+
+p segment({x:-5,y:3},{x:-2,y:-3})
