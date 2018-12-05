@@ -190,34 +190,34 @@ def segment2Array(tPt1, tPt2)
   return tSeg2Ar
 end
 
-def initGraph(tSurface, tBord)
+def initGraph(hVectBord,tObstacle)
   tGraph=[]
-  for i in 1..6999 do
-    for j in 1..2999 do
-      #a continuer
-    end
-  end
-  tSurfaceCpy=tSurface.clone
-  tSurfaceCpy.each do |pt|
-    pt[:cost]=PosInf
-    pt[:heuristic]=PosInf
-  end
-  tGraph+=tSurfaceCpy
-  tBordCpy=tBord.clone
+  tBord=border(hVectBord)
   tBord.each do |pt|
     pt[:cost]=PosInf
     pt[:heuristic]=PosInf
   end
   tGraph+=tBord
+  for i in 1..(hVectBord[:x]-1) do
+    for j in 1..(hVectBord[:y]-1) do
+      tGraph<< {x:i,y:j,cost:0,heuristic:0}
+    end
+  end
+  tObstacleCpy=tObstacle.clone
+  tObstacleCpy.each do |pt|
+    hVertex=tGraph.select{|hPt|hPt[:x]==pt[:x]&&hPt[:y]==pt[:y]}
+    hVertex[:cost]=PosInf
+    hVertex[:heuristic]=PosInf
+  end
   return tGraph
 end
 
-def border
+def border(hVectBord)
   bord=[]
-  bord+=segment2Array({x:0,y:0},{x:7000,y:0})
-  bord+=segment2Array({x:7000,y:0},{x:7000,y:3000})
-  bord+=segment2Array({x:7000,y:3000},{x:0,y:3000})
-  bord+=segment2Array({x:0,y:3000},{x:0,y:0})
+  bord+=segment2Array({x:0,y:0},{x:hVectBord[:x],y:0})
+  bord+=segment2Array({x:hVectBord[:x],y:0},{x:hVectBord[:x],y:hVectBord[:y]})
+  bord+=segment2Array({x:hVectBord[:x],y:hVectBord[:y]},{x:0,y:hVectBord[:y]})
+  bord+=segment2Array({x:0,y:hVectBord[:y]},{x:0,y:0})
   return bord
 end
 
@@ -246,6 +246,7 @@ tFather[{x:7,y:13}]={x:0,y:0}
 tFather[{x:3,y:7}]={x:7,y:13}
 #p reconstructPath(tFather, {x:3,y:7})
 #p segment2Array({x:-2,y:-3},{x:2,y:3})
-#p border
-#p initGraph(obstacle(tSurface),border)
-p obstacle(tSurface)
+#p border({x:7000,y:3000})
+p initGraph({x:7000,y:3000},obstacle(tSurface))
+#p obstacle(tSurface)
+
