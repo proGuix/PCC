@@ -1,7 +1,7 @@
 PosInf=+1.0/0.0
-tSpaceShip={}
+hSpaceShip={}
+hLandPoint={}
 tSurface=[]
-
 
 def formatPt(pt)
   ptFmt=pt.clone
@@ -20,7 +20,8 @@ def formatSurface(tSurface)
 end
 
 if ARGV[0].to_i==0
-  tSpaceShip={x:6500,y:2600}
+  hSpaceShip={x:6500,y:2600}
+  hLandPoint={x:2700,y:150}
   
   tSurface << {x:0,y:450}
   tSurface << {x:300,y:750}
@@ -45,8 +46,9 @@ if ARGV[0].to_i==0
   tSurface << {x:6000,y:950}
   tSurface << {x:6999,y:1750}
 else
-  tSpaceShip={x:6500,y:2000}
-
+  hSpaceShip={x:6500,y:2000}
+  hLandPoint={x:4200,y:220}
+  
   tSurface << {x:0,y:1800}
   tSurface << {x:300,y:1200}
   tSurface << {x:1000,y:1550}
@@ -198,19 +200,51 @@ def initGraph(hVectBord,tObstacle)
     pt[:heuristic]=PosInf
   end
   tGraph+=tBord
-  for i in 1..(hVectBord[:x]-1) do
-    for j in 1..(hVectBord[:y]-1) do
-      tGraph<< {x:i,y:j,cost:0,heuristic:0}
-    end
-  end
+  tGraph.uniq!
   tObstacleCpy=tObstacle.clone
   tObstacleCpy.each do |pt|
-    hVertex=tGraph.select{|hPt|hPt[:x]==pt[:x]&&hPt[:y]==pt[:y]}
-    hVertex[:cost]=PosInf
-    hVertex[:heuristic]=PosInf
+    hVertex=tGraph.select{|hPt|hPt[:x]==pt[:x]&&hPt[:y]==pt[:y]}[0]
+    if hVertex!=nil
+      hVertex[:cost]=PosInf
+      hVertex[:heuristic]=PosInf
+    else
+      pt[:cost]=PosInf
+      pt[:heuristic]=PosInf
+      tGraph<< pt
+    end
   end
   return tGraph
 end
+
+def initStartAndFinish(tGraph,hSpaceShip,hLandPoint)
+  hFinish={}
+  hFinish[:x]=hLandPoint[:x]
+  hFinish[:y]=hLandPoint[:y]
+  hFinish[:cost]=PosInf
+  hFinish[:heuristic]=0  
+  hStart={}
+  hStart[:x]=hSpaceShip[:x]
+  hStart[:y]=hSpaceShip[:y]
+  hStart[:cost]=0
+  hStart[:heuristic]=distance(hStart, hFinish)
+  hVertex=tGraph.select{|hPt|hPt[:x]==hFinish[:x]&&hPt[:y]==hFinish[:y]}[0]
+  if hVertex!=nil
+    hVertex[:cost]=hFinish[:cost]
+    hVertex[:heuristic]=hFinish[:heuristic]
+  else
+    tGraph<< hFinish
+  end
+    hVertex=tGraph.select{|hPt|hPt[:x]==hStart[:x]&&hPt[:y]==hStart[:y]}[0]
+  if hVertex!=nil
+    hVertex[:cost]=hStart[:cost]
+    hVertex[:heuristic]=hStart[:heuristic]
+  else
+    tGraph<< hStart
+  end
+  return tGraph,hStart,hFinish
+end
+
+
 
 def border(hVectBord)
   bord=[]
@@ -234,19 +268,23 @@ q<<{x:7,y:1,cost:0,heuristic:3}
 q<<{x:5,y:3,cost:0,heuristic:8}
 q<<{x:6,y:2,cost:0,heuristic:2}
 
-p q.pop
-p q.findWithCostInf({x:6,y:2,cost:0,heuristic:2})
-p q.find({x:6,y:3,cost:-1,heuristic:2})
-p distance({x:7,y:1,cost:0,heuristic:3}, {x:5,y:3,cost:0,heuristic:8})
-p q.empty?
-p neighbors({x:3,y:7})
+#p q.pop
+#p q.findWithCostInf({x:6,y:2,cost:0,heuristic:2})
+#p q.find({x:6,y:3,cost:-1,heuristic:2})
+#p distance({x:7,y:1,cost:0,heuristic:3}, {x:5,y:3,cost:0,heuristic:8})
+#p q.empty?
+#p neighbors({x:3,y:7})
 
-tFather={}
-tFather[{x:7,y:13}]={x:0,y:0}
-tFather[{x:3,y:7}]={x:7,y:13}
+#tFather={}
+#tFather[{x:7,y:13}]={x:0,y:0}
+#tFather[{x:3,y:7}]={x:7,y:13}
 #p reconstructPath(tFather, {x:3,y:7})
 #p segment2Array({x:-2,y:-3},{x:2,y:3})
 #p border({x:7000,y:3000})
-p initGraph({x:7000,y:3000},obstacle(tSurface))
 #p obstacle(tSurface)
-
+hSpaceShip={x:2,y:1}
+hLandPoint={x:2,y:1}
+tSurface=[{x:2,y:2},{x:1,y:2}]
+tGraph=initGraph({x:3,y:3},obstacle(tSurface))
+tGraph,hStart,hFinish=initStartAndFinish(tGraph,hSpaceShip,hLandPoint)
+p tGraph
