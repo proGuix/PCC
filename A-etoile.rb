@@ -125,7 +125,7 @@ end
 def reconstructPath(tFather,e)
   tPath=[]
   tPath << e
-  while tFather.include?(e)
+  while (tFather.select{|hPt|hPt[:x]==e[:x]&&hPt[:y]==e[:y]}.empty?)
     e=tFather[e]
     tPath.unshift e
   end
@@ -146,8 +146,8 @@ class NaivePriorityQueue
   def findWithCostInf(e)
     return _findWithCostInf(@m_tE,e)
   end
-  def find(e)
-    return @m_tE.find{|e0|e0[:x]==e[:x]&&e0[:y]==e[:y]}!=nil
+  def select(e)
+    return @m_tE.select{|e0|e0[:x]==e[:x]&&e0[:y]==e[:y]}[0]
   end
   def empty?
     return @m_tE.empty?
@@ -244,8 +244,6 @@ def initStartAndFinish(tGraph,hSpaceShip,hLandPoint)
   return tGraph,hStart,hFinish
 end
 
-
-
 def border(hVectBord)
   bord=[]
   bord+=segment2Array({x:0,y:0},{x:hVectBord[:x],y:0})
@@ -263,11 +261,6 @@ def obstacle(tSurface)
   return tObstacle
 end
 
-q = NaivePriorityQueue.new
-q<<{x:7,y:1,cost:0,heuristic:3}
-q<<{x:5,y:3,cost:0,heuristic:8}
-q<<{x:6,y:2,cost:0,heuristic:2}
-
 #p q.pop
 #p q.findWithCostInf({x:6,y:2,cost:0,heuristic:2})
 #p q.find({x:6,y:3,cost:-1,heuristic:2})
@@ -283,8 +276,58 @@ q<<{x:6,y:2,cost:0,heuristic:2}
 #p border({x:7000,y:3000})
 #p obstacle(tSurface)
 hSpaceShip={x:2,y:1}
-hLandPoint={x:2,y:1}
+hLandPoint={x:1,y:1}
 tSurface=[{x:2,y:2},{x:1,y:2}]
 tGraph=initGraph({x:3,y:3},obstacle(tSurface))
 tGraph,hStart,hFinish=initStartAndFinish(tGraph,hSpaceShip,hLandPoint)
-p tGraph
+#p tGraph
+
+tOpenSet=NaivePriorityQueue.new
+tClosedSet=[]
+hFather={}
+
+tOpenSet<< hStart
+i=0
+while !(tOpenSet.empty?) || i==1 do
+  p "tOpenSet"
+  p tOpenSet
+  hCurrent=tOpenSet.pop
+  p "hCurrent"
+  p hCurrent
+  p "tOpenSet"
+  p tOpenSet
+  if (hCurrent[:x]==hFinish[:x])&&(hCurrent[:y]==hFinish[:y])
+    p "reconstructPath"
+    p reconstructPath(hFather, hFinish)
+  end
+  tClosedSet<< hCurrent
+  p tClosedSet
+  tNeigh=neighbors(hCurrent)
+  p "tNeigh"
+  p tNeigh
+  tNeigh.each do |hNeigh|
+    if tClosedSet.select{|hPt|hPt[:x]==hNeigh[:x]&&hPt[:y]==hNeigh[:y]}.empty?
+      nCost=hCurrent[:cost]+distance(hCurrent,hNeigh)
+      hN=tOpenSet.select(hNeigh)
+      p "nH"
+      p hN
+      if hN==nil
+        hNeighConstruct={}
+        hNeighConstruct[:x]=hNeigh[:x]
+        hNeighConstruct[:y]=hNeigh[:y]
+        hNeighConstruct[:cost]=nCost
+        hNeighConstruct[:heuristic]=nCost+distance(hNeighConstruct,hFinish)
+        tOpenSet<< hNeighConstruct
+      elsif hN[:cost]>nCost
+        #hN[:cost]=nCost
+        #hN[:heuristic]=hN[:cost]+distance(hN,hFinish)
+      end
+      p "tOpenSet"
+      p tOpenSet
+      hFather[hNeigh]=hCurrent
+      p "hFather"
+      p hFather
+    end
+    i+=1
+  end
+end
