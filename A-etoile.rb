@@ -122,12 +122,14 @@ def neighbors(e)
   return tNeigh
 end
 
-def reconstructPath(tFather,e)
+def reconstructPath(hFather,hFinish)
+  hCurrent=(hFather.keys.select{|hKey|hKey[:x]==hFinish[:x]&&hKey[:y]==hFinish[:y]}[0])
   tPath=[]
-  tPath << e
-  while (tFather.select{|hPt|hPt[:x]==e[:x]&&hPt[:y]==e[:y]}.empty?)
-    e=tFather[e]
-    tPath.unshift e
+  tPath << hCurrent
+  loop do
+    hCurrent=hFather[hCurrent]
+    break if hCurrent==nil
+    tPath.unshift hCurrent
   end
   return tPath
 end
@@ -276,9 +278,9 @@ end
 #p border({x:7000,y:3000})
 #p obstacle(tSurface)
 hSpaceShip={x:2,y:1}
-hLandPoint={x:1,y:1}
+hLandPoint={x:0,y:3}
 tSurface=[{x:2,y:2},{x:1,y:2}]
-tGraph=initGraph({x:3,y:3},obstacle(tSurface))
+tGraph=initGraph({x:4,y:4},obstacle(tSurface))
 tGraph,hStart,hFinish=initStartAndFinish(tGraph,hSpaceShip,hLandPoint)
 #p tGraph
 
@@ -289,31 +291,19 @@ hFather={}
 tOpenSet<< hStart
 i=0
 while !(tOpenSet.empty?) do
-  p "tOpenSet"
-  p tOpenSet
   hCurrent=tOpenSet.pop
-  p "hCurrent"
-  p hCurrent
-  p "tOpenSet"
-  p tOpenSet
   if (hCurrent[:x]==hFinish[:x])&&(hCurrent[:y]==hFinish[:y])
-    p "reconstructPath"
     p reconstructPath(hFather, hFinish)
+    exit
   end
   tClosedSet<< hCurrent
-  p tClosedSet
   tNeigh=neighbors(hCurrent)
-  p "tNeigh"
-  p tNeigh
   tNeigh.each do |hNeigh|
     if tClosedSet.select{|hPt|hPt[:x]==hNeigh[:x]&&hPt[:y]==hNeigh[:y]}.empty?
       hNGraph=tGraph.select{|hPt|hPt[:x]==hNeigh[:x]&&hPt[:y]==hNeigh[:y]}[0]
       if hNGraph==nil||(hNGraph!=nil&&hNGraph[:cost]!=PosInf)
         nCost=hCurrent[:cost]+distance(hCurrent,hNeigh)
-        hNOpenSet=tOpenSet.select(hNeigh)
-        p "hHOpenSet"
-        p hNOpenSet
-        
+        hNOpenSet=tOpenSet.select(hNeigh)        
         if hNOpenSet==nil
           hNeighConstruct={}
           hNeighConstruct[:x]=hNeigh[:x]
@@ -321,18 +311,14 @@ while !(tOpenSet.empty?) do
           hNeighConstruct[:cost]=nCost
           hNeighConstruct[:heuristic]=nCost+distance(hNeighConstruct,hFinish)
           tOpenSet<< hNeighConstruct
-          hFather[hNeigh]=hCurrent
+          hFather[hNeighConstruct]=hCurrent
         elsif hNOpenSet[:cost]>nCost
           hNOpenSet[:cost]=nCost
           hNOpenSet[:heuristic]=hNOpenSet[:cost]+distance(hNOpenSet,hFinish)
-          hFather[hNeigh]=hCurrent
+          hFather.reject!{|hKey|hKey[:x]==hNOpenSet[:x]&&hKey[:y]==hNOpenSet[:y]}
+          hFather[hNOpenSet]=hCurrent
         end
-        p "tOpenSet"
-        p tOpenSet
-        p "hFather"
-        p hFather
       end
     end
-    i+=1
   end
 end
