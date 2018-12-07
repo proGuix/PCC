@@ -220,8 +220,8 @@ def initStartAndFinish(tGraph,hSpaceShip,hLandPoint)
   hFinish={}
   hFinish[:x]=hLandPoint[:x]
   hFinish[:y]=hLandPoint[:y]
-  hFinish[:cost]=PosInf
-  hFinish[:heuristic]=0  
+  hFinish[:cost]=-1
+  hFinish[:heuristic]=-1
   hStart={}
   hStart[:x]=hSpaceShip[:x]
   hStart[:y]=hSpaceShip[:y]
@@ -288,7 +288,7 @@ hFather={}
 
 tOpenSet<< hStart
 i=0
-while !(tOpenSet.empty?) || i==1 do
+while !(tOpenSet.empty?) do
   p "tOpenSet"
   p tOpenSet
   hCurrent=tOpenSet.pop
@@ -307,26 +307,31 @@ while !(tOpenSet.empty?) || i==1 do
   p tNeigh
   tNeigh.each do |hNeigh|
     if tClosedSet.select{|hPt|hPt[:x]==hNeigh[:x]&&hPt[:y]==hNeigh[:y]}.empty?
-      nCost=hCurrent[:cost]+distance(hCurrent,hNeigh)
-      hN=tOpenSet.select(hNeigh)
-      p "nH"
-      p hN
-      if hN==nil
-        hNeighConstruct={}
-        hNeighConstruct[:x]=hNeigh[:x]
-        hNeighConstruct[:y]=hNeigh[:y]
-        hNeighConstruct[:cost]=nCost
-        hNeighConstruct[:heuristic]=nCost+distance(hNeighConstruct,hFinish)
-        tOpenSet<< hNeighConstruct
-      elsif hN[:cost]>nCost
-        #hN[:cost]=nCost
-        #hN[:heuristic]=hN[:cost]+distance(hN,hFinish)
+      hNGraph=tGraph.select{|hPt|hPt[:x]==hNeigh[:x]&&hPt[:y]==hNeigh[:y]}[0]
+      if hNGraph==nil||(hNGraph!=nil&&hNGraph[:cost]!=PosInf)
+        nCost=hCurrent[:cost]+distance(hCurrent,hNeigh)
+        hNOpenSet=tOpenSet.select(hNeigh)
+        p "hHOpenSet"
+        p hNOpenSet
+        
+        if hNOpenSet==nil
+          hNeighConstruct={}
+          hNeighConstruct[:x]=hNeigh[:x]
+          hNeighConstruct[:y]=hNeigh[:y]
+          hNeighConstruct[:cost]=nCost
+          hNeighConstruct[:heuristic]=nCost+distance(hNeighConstruct,hFinish)
+          tOpenSet<< hNeighConstruct
+          hFather[hNeigh]=hCurrent
+        elsif hNOpenSet[:cost]>nCost
+          hNOpenSet[:cost]=nCost
+          hNOpenSet[:heuristic]=hNOpenSet[:cost]+distance(hNOpenSet,hFinish)
+          hFather[hNeigh]=hCurrent
+        end
+        p "tOpenSet"
+        p tOpenSet
+        p "hFather"
+        p hFather
       end
-      p "tOpenSet"
-      p tOpenSet
-      hFather[hNeigh]=hCurrent
-      p "hFather"
-      p hFather
     end
     i+=1
   end
