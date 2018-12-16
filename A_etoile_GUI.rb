@@ -27,113 +27,77 @@ class Board < Gtk::DrawingArea
     @m_hVectBordFmt={}
     @m_tBordFmt=[]
     @m_tObstacleFmt=[]
+    @m_tGraph=[]
+    @m_hStart={}
+    @m_hFinish={}
+    @m_tOpenSet=A_etoile::NaivePriorityQueue.new
+    @m_tClosedSet=[]
+    @m_hFather={}
     override_background_color :normal, Gdk::RGBA.new(0, 0, 0, 1)
     signal_connect "draw" do
       on_draw
     end
-    GLib::Timeout.add(1000){loop}
+    GLib::Timeout.add(100){on_timer}
+  end
+
+  def on_timer
+    queue_draw
+    return true
   end
 
   def init hSpaceShip,hLandPoint,tSurface,hVectBord
-    if (hSpaceShip != {} &&
-        hLandPoint != {} &&
-        tSurface != [] &&
-        hVectBord != {})
-      @m_hSpaceShip=hSpaceShip
-      @m_hLandPoint=hLandPoint
-      @m_tSurface=tSurface
-      @m_hVectBord=hVectBord
-
-      if @m_hVectBord[:x] <= 0 || @m_hVectBord[:y] <= 0
-        @m_sMessError = "La hauteur et la largeur de la zone doivent être strictements positives"
-        @m_bInitError = true
-      end
-      if !@m_bInitError && (@m_hSpaceShip[:x] <= 0 || @m_hSpaceShip[:y] <= 0 || @m_hSpaceShip[:x] >= @m_hVectBord[:x] || @m_hSpaceShip[:y] >= @m_hVectBord[:y])
-        @m_sMessError = "Le point de départ doit se trouver à l'intérieur strict de la zone"
-        @m_bInitError = true
-      end
-      if !@m_bInitError && (@m_hLandPoint[:x] <= 0 || @m_hLandPoint[:y] <= 0 || @m_hLandPoint[:x] >= @m_hVectBord[:x] || @m_hLandPoint[:y] >= @m_hVectBord[:y])
-        @m_sMessError = "Le point d'arrivée doit se trouver à l'intérieur strict de la zone"
-        @m_bInitError = true
-      end
-      if !@m_bInitError && belongSurface(@m_hSpaceShip, @m_tSurface)
-        @m_sMessError = "Le point de départ ne doit pas se trouver sur un obstacle"
-        @m_bInitError = true
-      end
-      if !@m_bInitError && belongSurface(@m_hLandPoint, @m_tSurface)
-        @m_sMessError = "Le point d'arrivée ne doit pas se trouver sur un obstacle"
-        @m_bInitError = true
-      end
-      
-      if !@m_bInitError
-        @m_nRadius=[((WIDTH/@m_hVectBord[:x])/5).to_i, ((HEIGHT/@m_hVectBord[:y])/5).to_i].min
-        @m_nScaleHeight=HEIGHT-(2*@m_nRadius)
-        @m_nScaleWidth=WIDTH-(2*@m_nRadius)
-        @m_tSurface.each do |s|
-          @m_tSurfaceFmt << [{x:((s[0][:x]*@m_nScaleWidth)/@m_hVectBord[:x]).to_i,y:((s[0][:y]*@m_nScaleHeight)/@m_hVectBord[:y]).to_i}, {x:((s[1][:x]*@m_nScaleWidth)/@m_hVectBord[:x]).to_i,y:((s[1][:y]*@m_nScaleHeight)/@m_hVectBord[:y]).to_i}]
-        end
-        @m_hSpaceShipFmt={x:(@m_hSpaceShip[:x]*@m_nScaleWidth)/@m_hVectBord[:x],y:(@m_hSpaceShip[:y]*@m_nScaleHeight)/@m_hVectBord[:y]}
-        @m_hLandPointFmt={x:(@m_hLandPoint[:x]*@m_nScaleWidth)/@m_hVectBord[:x],y:(@m_hLandPoint[:y]*@m_nScaleHeight)/@m_hVectBord[:y]}
-        @m_hVectBordFmt[:x]=@m_nScaleWidth
-        @m_hVectBordFmt[:y]=@m_nScaleHeight
-        @m_tBordFmt=A_etoile::border(@m_hVectBordFmt)
-        @m_tObstacleFmt = A_etoile::obstacle(@m_tSurfaceFmt)
-      end
+    @m_hSpaceShip = hSpaceShip
+    @m_hLandPoint = hLandPoint
+    @m_tSurface = tSurface
+    @m_hVectBord = hVectBord
+    
+    if (@m_hSpaceShip == {} ||
+        @m_hLandPoint == {} ||
+        @m_tSurface == [] ||
+        @m_hVectBord == {})
+      @m_sMessError = "Certaines données sont manquantes"
+      @m_bInitError = true
     end
-  end
-  
-  def loop
-    if !@m_bInitError && start_or_continue
-      tGraph=A_etoile::initGraph(@m_hVectBord,A_etoile::obstacle(@m_tSurface))
-      tGraph,hStart,hFinish=A_etoile::initStartAndFinish(tGraph,@m_hSpaceShip,@m_hLandPoint)
-      tOpenSet=A_etoile::NaivePriorityQueue.new
-      tClosedSet=[]
-      hFather={}
-      tOpenSet<< hStart
-      while !(tOpenSet.empty?) do
-        hCurrent=tOpenSet.pop
 
-        @m_tHist.reject!{|hKey|hKey[:x]==hCurrent[:x]&&hKey[:y]==hCurrent[:y]}
-        @m_tHist << hCurrent
-        p "Current node : " + hCurrent.to_s
-        queue_draw
-        
-        if (hCurrent[:x]==hFinish[:x])&&(hCurrent[:y]==hFinish[:y])
-          @m_tFinalPath=A_etoile::reconstructPath(hFather, hCurrent)
-          p "Final path : " + @m_tFinalPath.to_s
-          @m_bFinish=true
-          return
-        end
-        tClosedSet<< hCurrent
-        tNeigh=A_etoile::neighbors(hCurrent, tGraph, @m_tSurface)
-        tNeigh.each do |hNeigh|
-          if tClosedSet.select{|hPt|hPt[:x]==hNeigh[:x]&&hPt[:y]==hNeigh[:y]}.empty?
-            nCost=hCurrent[:cost]+A_etoile::distance(hCurrent,hNeigh)
-            hNOpenSet=tOpenSet.select(hNeigh)        
-            if hNOpenSet==nil
-              hNeighNew=hNeigh.clone
-              hNeighNew[:cost]=nCost
-              hNeighNew[:heuristic]=nCost+A_etoile::distance(hNeighNew,hFinish)
-              tOpenSet<< hNeighNew
-              hFather[hNeighNew]=hCurrent
-            elsif hNOpenSet[:cost]>nCost
-              hNOpenSet[:cost]=nCost
-              hNOpenSet[:heuristic]=hNOpenSet[:cost]+A_etoile::distance(hNOpenSet,hFinish)
-              hFather.reject!{|hKey|hKey[:x]==hNOpenSet[:x]&&hKey[:y]==hNOpenSet[:y]}
-              hFather[hNOpenSet]=hCurrent
-            end
-          end
-        end
-      end
+    if !@m_bInitError && (@m_hVectBord[:x] <= 0 || @m_hVectBord[:y] <= 0)
+      @m_sMessError = "La hauteur et la largeur de la zone doivent être strictements positives"
+      @m_bInitError = true
     end
-  end
-  
-  def start_or_continue
-    return (@m_hSpaceShip != {} &&
-            @m_hLandPoint != {} &&
-            @m_tSurface != [] &&
-            @m_hVectBord != {} &&
-            @m_bFinish == false)
+    if !@m_bInitError && (@m_hSpaceShip[:x] <= 0 || @m_hSpaceShip[:y] <= 0 || @m_hSpaceShip[:x] >= @m_hVectBord[:x] || @m_hSpaceShip[:y] >= @m_hVectBord[:y])
+      @m_sMessError = "Le point de départ doit se trouver à l'intérieur strict de la zone"
+      @m_bInitError = true
+    end
+    if !@m_bInitError && (@m_hLandPoint[:x] <= 0 || @m_hLandPoint[:y] <= 0 || @m_hLandPoint[:x] >= @m_hVectBord[:x] || @m_hLandPoint[:y] >= @m_hVectBord[:y])
+      @m_sMessError = "Le point d'arrivée doit se trouver à l'intérieur strict de la zone"
+      @m_bInitError = true
+    end
+    if !@m_bInitError && belongSurface(@m_hSpaceShip, @m_tSurface)
+      @m_sMessError = "Le point de départ ne doit pas se trouver sur un obstacle"
+      @m_bInitError = true
+    end
+    if !@m_bInitError && belongSurface(@m_hLandPoint, @m_tSurface)
+      @m_sMessError = "Le point d'arrivée ne doit pas se trouver sur un obstacle"
+      @m_bInitError = true
+    end
+    
+    if !@m_bInitError
+      @m_nRadius=[((WIDTH/@m_hVectBord[:x])/5).to_i, ((HEIGHT/@m_hVectBord[:y])/5).to_i].min
+      @m_nScaleHeight=HEIGHT-(2*@m_nRadius)
+      @m_nScaleWidth=WIDTH-(2*@m_nRadius)
+      @m_tSurface.each do |s|
+        @m_tSurfaceFmt << [{x:((s[0][:x]*@m_nScaleWidth)/@m_hVectBord[:x]).to_i,y:((s[0][:y]*@m_nScaleHeight)/@m_hVectBord[:y]).to_i}, {x:((s[1][:x]*@m_nScaleWidth)/@m_hVectBord[:x]).to_i,y:((s[1][:y]*@m_nScaleHeight)/@m_hVectBord[:y]).to_i}]
+      end
+      @m_hSpaceShipFmt={x:(@m_hSpaceShip[:x]*@m_nScaleWidth)/@m_hVectBord[:x],y:(@m_hSpaceShip[:y]*@m_nScaleHeight)/@m_hVectBord[:y]}
+      @m_hLandPointFmt={x:(@m_hLandPoint[:x]*@m_nScaleWidth)/@m_hVectBord[:x],y:(@m_hLandPoint[:y]*@m_nScaleHeight)/@m_hVectBord[:y]}
+      @m_hVectBordFmt[:x]=@m_nScaleWidth
+      @m_hVectBordFmt[:y]=@m_nScaleHeight
+      @m_tBordFmt=A_etoile::border(@m_hVectBordFmt)
+      @m_tObstacleFmt = A_etoile::obstacle(@m_tSurfaceFmt)
+
+      @m_tGraph=A_etoile::initGraph(@m_hVectBord,A_etoile::obstacle(@m_tSurface))
+      @m_tGraph, @m_hStart, @m_hFinish=A_etoile::initStartAndFinish(@m_tGraph,@m_hSpaceShip,@m_hLandPoint)
+      @m_tOpenSet << @m_hStart
+    end
   end
   
   def on_draw
@@ -149,7 +113,13 @@ class Board < Gtk::DrawingArea
       
       cr.move_to w - te.width/2, h
       cr.show_text @m_sMessError
-    else
+    elsif !@m_tOpenSet.empty? && !@m_bFinish
+      hCurrent=@m_tOpenSet.pop
+
+      @m_tHist.reject!{|hKey|hKey[:x]==hCurrent[:x]&&hKey[:y]==hCurrent[:y]}
+      @m_tHist << hCurrent
+      p "Current node : " + hCurrent.to_s
+
       cr.set_source_rgb 1.0, 1.0, 1.0
       cr.paint
       
@@ -169,6 +139,59 @@ class Board < Gtk::DrawingArea
         cr.fill
       end
 
+      cr.set_source_rgb 0.6, 0.2, 0.0
+      cr.arc @m_nRadius+@m_hSpaceShipFmt[:x], @m_nRadius+@m_hSpaceShipFmt[:y], @m_nRadius*2, 0, 2*Math::PI
+      cr.fill
+
+      cr.set_source_rgb 1.0, 0.5, 0.31
+      cr.arc @m_nRadius+@m_hLandPointFmt[:x], @m_nRadius+@m_hLandPointFmt[:y], @m_nRadius*2, 0, 2*Math::PI
+      cr.fill
+      
+      if (hCurrent[:x]==@m_hFinish[:x])&&(hCurrent[:y]==@m_hFinish[:y])
+        @m_tFinalPath=A_etoile::reconstructPath(@m_hFather, hCurrent)
+        p "Final path : " + @m_tFinalPath.to_s
+        @m_bFinish=true
+      end
+      @m_tClosedSet << hCurrent
+      tNeigh=A_etoile::neighbors(hCurrent, @m_tGraph, @m_tSurface)
+      tNeigh.each do |hNeigh|
+        if @m_tClosedSet.select{|hPt|hPt[:x]==hNeigh[:x]&&hPt[:y]==hNeigh[:y]}.empty?
+          nCost=hCurrent[:cost]+A_etoile::distance(hCurrent,hNeigh)
+          hNOpenSet=@m_tOpenSet.select(hNeigh)        
+          if hNOpenSet==nil
+            hNeighNew=hNeigh.clone
+            hNeighNew[:cost]=nCost
+            hNeighNew[:heuristic]=nCost+A_etoile::distance(hNeighNew,@m_hFinish)
+            @m_tOpenSet << hNeighNew
+            @m_hFather[hNeighNew]=hCurrent
+          elsif hNOpenSet[:cost]>nCost
+            hNOpenSet[:cost]=nCost
+            hNOpenSet[:heuristic]=hNOpenSet[:cost]+A_etoile::distance(hNOpenSet, @m_hFinish)
+            @m_hFather.reject!{|hKey|hKey[:x]==hNOpenSet[:x]&&hKey[:y]==hNOpenSet[:y]}
+            @m_hFather[hNOpenSet]=hCurrent
+          end
+        end
+      end
+    elsif @m_bFinish
+      cr.set_source_rgb 1.0, 1.0, 1.0
+      cr.paint
+      
+      cr.set_source_rgb 1.0, 0.0, 0.0
+      @m_tBordFmt.each do |pt|
+        cr.arc @m_nRadius+pt[:x], @m_nRadius+pt[:y], @m_nRadius, 0, 2*Math::PI
+        cr.fill
+      end
+      @m_tObstacleFmt.each do |pt|
+        cr.arc @m_nRadius+pt[:x], @m_nRadius+pt[:y], @m_nRadius, 0, 2*Math::PI
+        cr.fill
+      end
+      
+      cr.set_source_rgb 0.0, 0.0, 1.0
+      @m_tHist.each do |pt|
+        cr.arc @m_nRadius+((pt[:x]*@m_nScaleWidth)/@m_hVectBord[:x]), @m_nRadius+((pt[:y]*@m_nScaleHeight)/@m_hVectBord[:y]), @m_nRadius, 0, 2*Math::PI
+        cr.fill
+      end
+      
       cr.set_source_rgb 0.6, 0.2, 0.0
       cr.arc @m_nRadius+@m_hSpaceShipFmt[:x], @m_nRadius+@m_hSpaceShipFmt[:y], @m_nRadius*2, 0, 2*Math::PI
       cr.fill
