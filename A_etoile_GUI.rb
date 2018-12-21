@@ -37,7 +37,6 @@ class Board < Gtk::DrawingArea
     signal_connect "draw" do
       on_draw
     end
-    GLib::Timeout.add(100){on_timer}
   end
 
   def on_timer
@@ -45,20 +44,20 @@ class Board < Gtk::DrawingArea
     return true
   end
 
-  def init hSpaceShip,hLandPoint,tSurface,hVectBord
+  def init hSpaceShip, hLandPoint, tSurface, hVectBord, nCoefReduc
     @m_hSpaceShip = hSpaceShip
     @m_hLandPoint = hLandPoint
     @m_tSurface = tSurface
     @m_hVectBord = hVectBord
+    @m_nCoefReduc = nCoefReduc
     
     if (@m_hSpaceShip == {} ||
         @m_hLandPoint == {} ||
-        @m_tSurface == [] ||
         @m_hVectBord == {})
       @m_sMessError = "Certaines données sont manquantes"
       @m_bInitError = true
     end
-
+    
     if !@m_bInitError && (@m_hVectBord[:x] <= 0 || @m_hVectBord[:y] <= 0)
       @m_sMessError = "La hauteur et la largeur de la zone doivent être strictements positives"
       @m_bInitError = true
@@ -81,7 +80,22 @@ class Board < Gtk::DrawingArea
     end
     
     if !@m_bInitError
-      @m_nRadius=[((WIDTH/@m_hVectBord[:x])/5).to_i, ((HEIGHT/@m_hVectBord[:y])/5).to_i].min
+      if @m_nCoefReduc != 1
+        @m_hSpaceShip[:x] = (@m_hSpaceShip[:x]/@m_nCoefReduc).to_i
+        @m_hSpaceShip[:y] = (@m_hSpaceShip[:y]/@m_nCoefReduc).to_i
+        @m_hLandPoint[:x] = (@m_hLandPoint[:x]/@m_nCoefReduc).to_i
+        @m_hLandPoint[:y] = (@m_hLandPoint[:y]/@m_nCoefReduc).to_i
+        @m_hVectBord[:x] = (@m_hVectBord[:x]/@m_nCoefReduc).to_i
+        @m_hVectBord[:y] = (@m_hVectBord[:y]/@m_nCoefReduc).to_i
+        @m_tSurface.each do |s|
+          s[0][:x] = (s[0][:x]/@m_nCoefReduc).to_i
+          s[0][:y] = (s[0][:y]/@m_nCoefReduc).to_i
+          s[1][:x] = (s[1][:x]/@m_nCoefReduc).to_i
+          s[1][:y] = (s[1][:y]/@m_nCoefReduc).to_i
+        end
+      end
+      
+      @m_nRadius=[[(WIDTH/@m_hVectBord[:x])/5, (HEIGHT/@m_hVectBord[:y])/5].min, 1].max
       @m_nScaleHeight=HEIGHT-(2*@m_nRadius)
       @m_nScaleWidth=WIDTH-(2*@m_nRadius)
       @m_tSurface.each do |s|
@@ -97,6 +111,7 @@ class Board < Gtk::DrawingArea
       @m_tGraph=A_etoile::initGraph(@m_hVectBord,A_etoile::obstacle(@m_tSurface))
       @m_tGraph, @m_hStart, @m_hFinish=A_etoile::initStartAndFinish(@m_tGraph,@m_hSpaceShip,@m_hLandPoint)
       @m_tOpenSet << @m_hStart
+      GLib::Timeout.add([1000/@m_hVectBord[:x], 1000/@m_hVectBord[:y], 1].max){on_timer}
     end
   end
   
@@ -161,12 +176,12 @@ class Board < Gtk::DrawingArea
           if hNOpenSet==nil
             hNeighNew=hNeigh.clone
             hNeighNew[:cost]=nCost
-            hNeighNew[:heuristic]=nCost+A_etoile::distance(hNeighNew,@m_hFinish)
+            hNeighNew[:heuristic]=nCost+(5*A_etoile::distance(hNeighNew,@m_hFinish))
             @m_tOpenSet << hNeighNew
             @m_hFather[hNeighNew]=hCurrent
           elsif hNOpenSet[:cost]>nCost
             hNOpenSet[:cost]=nCost
-            hNOpenSet[:heuristic]=hNOpenSet[:cost]+A_etoile::distance(hNOpenSet, @m_hFinish)
+            hNOpenSet[:heuristic]=hNOpenSet[:cost]+(5*A_etoile::distance(hNOpenSet, @m_hFinish))
             @m_hFather.reject!{|hKey|hKey[:x]==hNOpenSet[:x]&&hKey[:y]==hNOpenSet[:y]}
             @m_hFather[hNOpenSet]=hCurrent
           end
@@ -227,23 +242,75 @@ class RubyApp < Gtk::Window
 end
 
 tSurface = []
-tSurface << [{x:2,y:3},{x:3,y:4}]
-tSurface << [{x:3,y:2},{x:4,y:3}]
-tSurface << [{x:4,y:3},{x:5,y:2}]
-tSurface << [{x:3,y:4},{x:2,y:5}]
-tSurface << [{x:2,y:2},{x:3,y:2}]
-tSurface << [{x:2,y:2},{x:2,y:3}]
-tSurface << [{x:9,y:0},{x:4,y:5}]
-tSurface << [{x:7,y:7},{x:7,y:9}]
-tSurface << [{x:2,y:5},{x:2,y:7}]
-tSurface << [{x:2,y:7},{x:3,y:7}]
-tSurface << [{x:5,y:7},{x:5,y:6}]
-tSurface << [{x:3,y:7},{x:5,y:9}]
-hSpaceShip = {x:1,y:5}
-hLandPoint = {x:8,y:8}
-hVectBord = {x:9,y:9}
+#tSurface << [{x:2,y:3},{x:3,y:4}]
+#tSurface << [{x:3,y:2},{x:4,y:3}]
+#tSurface << [{x:4,y:3},{x:5,y:2}]
+#tSurface << [{x:3,y:4},{x:2,y:5}]
+#tSurface << [{x:2,y:2},{x:3,y:2}]
+#tSurface << [{x:2,y:2},{x:2,y:3}]
+#tSurface << [{x:9,y:0},{x:4,y:5}]
+#tSurface << [{x:7,y:7},{x:7,y:9}]
+#tSurface << [{x:2,y:5},{x:2,y:7}]
+#tSurface << [{x:2,y:7},{x:3,y:7}]
+#tSurface << [{x:5,y:7},{x:5,y:6}]
+#tSurface << [{x:3,y:7},{x:5,y:9}]
+#hSpaceShip = {x:1,y:1}
+#hLandPoint = {x:9,y:9}
+#hVectBord = {x:10,y:10}
+
+#hSpaceShip={x:65,y:26}
+#hLandPoint={x:27,y:2}
+#hVectBord={x:70,y:30}
+#tSurface << [{x:0,y:4},{x:3,y:7}]
+#tSurface << [{x:3,y:7},{x:10,y:4}]
+#tSurface << [{x:10,y:4},{x:15,y:6}]
+#tSurface << [{x:15,y:6},{x:18,y:8}]
+#tSurface << [{x:18,y:8},{x:20,y:19}]
+#tSurface << [{x:20,y:19},{x:22,y:18}]
+#tSurface << [{x:22,y:18},{x:24,y:20}]
+#tSurface << [{x:24,y:20},{x:31,y:18}]
+#tSurface << [{x:31,y:18},{x:31,y:15}]
+#tSurface << [{x:31,y:15},{x:25,y:16}]
+#tSurface << [{x:25,y:16},{x:22,y:15}]
+#tSurface << [{x:22,y:15},{x:21,y:7}]
+#tSurface << [{x:21,y:7},{x:22,y:1}]
+#tSurface << [{x:22,y:1},{x:32,y:1}]
+#tSurface << [{x:32,y:1},{x:35,y:4}]
+#tSurface << [{x:35,y:4},{x:40,y:9}]
+#tSurface << [{x:40,y:9},{x:45,y:14}]
+#tSurface << [{x:45,y:14},{x:50,y:15}]
+#tSurface << [{x:50,y:15},{x:55,y:15}]
+#tSurface << [{x:55,y:15},{x:60,y:9}]
+#tSurface << [{x:60,y:9},{x:69,y:17}]
+
+hSpaceShip={x:6500,y:2600}
+hLandPoint={x:2700,y:151}
+hVectBord={x:7000,y:3000}
+
+tSurface << [{x:0,y:450},{x:300,y:750}]
+tSurface << [{x:300,y:750},{x:1000,y:450}]
+tSurface << [{x:1000,y:450},{x:1500,y:650}]
+tSurface << [{x:1500,y:650},{x:1800,y:850}]
+tSurface << [{x:1800,y:850},{x:2000,y:1950}]
+tSurface << [{x:2000,y:1950},{x:2200,y:1850}]
+tSurface << [{x:2200,y:1850},{x:2400,y:2000}]
+tSurface << [{x:2400,y:2000},{x:3100,y:1800}]
+tSurface << [{x:3100,y:1800},{x:3150,y:1550}]
+tSurface << [{x:3150,y:1550},{x:2500,y:1600}]
+tSurface << [{x:2500,y:1600},{x:2200,y:1550}]
+tSurface << [{x:2200,y:1550},{x:2100,y:750}]
+tSurface << [{x:2100,y:750},{x:2200,y:150}]
+tSurface << [{x:2200,y:150},{x:3200,y:150}]
+tSurface << [{x:3200,y:150},{x:3500,y:450}]
+tSurface << [{x:3500,y:450},{x:4000,y:950}]
+tSurface << [{x:4000,y:950},{x:4500,y:1450}]
+tSurface << [{x:4500,y:1450},{x:5000,y:1550}]
+tSurface << [{x:5000,y:1550},{x:5500,y:1500}]
+tSurface << [{x:5500,y:1500},{x:6000,y:950}]
+tSurface << [{x:6000,y:950},{x:6999,y:1750}]
+
 board = Board.new
-board.init(hSpaceShip, hLandPoint, tSurface, hVectBord)
+board.init(hSpaceShip, hLandPoint, tSurface, hVectBord, 3)
 window = RubyApp.new
 window.add_board board
 Gtk.main
