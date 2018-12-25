@@ -61,36 +61,43 @@ else
   tSurface << [{x:0,y:2},{x:2,y:2}]
 end
 
-tGraph=A_etoile::initGraph(hVectBord,A_etoile::obstacle(tSurface))
-tGraph,hStart,hFinish=A_etoile::initStartAndFinish(tGraph,hSpaceShip,hLandPoint)
-tOpenSet=A_etoile::NaivePriorityQueue.new
-tClosedSet=[]
-hFather={}
-tOpenSet<< hStart
+nWeight = 1
+nDistMin = 0
+tObstacle = A_etoile::obstacle(tSurface)
+tGraph = A_etoile::initGraph(tObstacle)
+tGraph, hStart, hFinish = A_etoile::initStartAndFinish(tGraph, hSpaceShip, hLandPoint)
+tOpenSet = A_etoile::PriorityQueue.new
+tClosedSet = []
+hFather = {}
+tOpenSet << hStart
 while !(tOpenSet.empty?) do
-  hCurrent=tOpenSet.pop
+  hCurrent = tOpenSet.pop
   p "Current node : " + hCurrent.to_s
-  if (hCurrent[:x]==hFinish[:x])&&(hCurrent[:y]==hFinish[:y])
+  if (hCurrent[:x] == hFinish[:x]) && (hCurrent[:y] == hFinish[:y])
     p "Final path : " + A_etoile::reconstructPath(hFather, hCurrent).to_s
     exit
   end
-  tClosedSet<< hCurrent
-  tNeigh=neighbors(hCurrent, tGraph, tSurface)
+  tClosedSet << hCurrent
+  tNeigh = A_etoile::neighbors(hCurrent, tGraph, tSurface)
   tNeigh.each do |hNeigh|
-    if tClosedSet.select{|hPt|hPt[:x]==hNeigh[:x]&&hPt[:y]==hNeigh[:y]}.empty?
-      nCost=hCurrent[:cost]+A_etoile::distance(hCurrent,hNeigh)
-      hNOpenSet=tOpenSet.select(hNeigh)        
-      if hNOpenSet==nil
-        hNeighNew=hNeigh.clone
-        hNeighNew[:cost]=nCost
-        hNeighNew[:heuristic]=nCost+A_etoile::distance(hNeighNew,hFinish)
-        tOpenSet<< hNeighNew
-        hFather[hNeighNew]=hCurrent
-      elsif hNOpenSet[:cost]>nCost
-        hNOpenSet[:cost]=nCost
-        hNOpenSet[:heuristic]=hNOpenSet[:cost]+A_etoile::distance(hNOpenSet,hFinish)
-        hFather.reject!{|hKey|hKey[:x]==hNOpenSet[:x]&&hKey[:y]==hNOpenSet[:y]}
-        hFather[hNOpenSet]=hCurrent
+    if A_etoile::IsAllDistanceMin(hVectBord, tObstacle, hStart, hFinish, hNeigh, nDistMin)
+      if hNeigh[:x] > 0 && hNeigh[:x] < hVectBord[:x] && hNeigh[:y] > 0 && hNeigh[:y] < hVectBord[:y]
+        if tClosedSet.select{|hPt|hPt[:x]==hNeigh[:x]&&hPt[:y]==hNeigh[:y]}.empty?
+          nCost = hCurrent[:cost] + A_etoile::distance(hCurrent, hNeigh)
+          hNOpenSet = tOpenSet.select(hNeigh)
+          if hNOpenSet == nil
+            hNeighNew = hNeigh.clone
+            hNeighNew[:cost] = nCost
+            hNeighNew[:heuristic] = nCost + (nWeight * A_etoile::distance(hNeighNew, hFinish))
+            tOpenSet << hNeighNew
+            hFather[hNeighNew] = hCurrent
+          elsif hNOpenSet[:cost] > nCost
+            hNOpenSet[:cost] = nCost
+            hNOpenSet[:heuristic] = hNOpenSet[:cost] + (nWeight * A_etoile::distance(hNOpenSet, hFinish))
+            hFather.reject!{|hKey| hKey[:x] == hNOpenSet[:x] && hKey[:y] == hNOpenSet[:y]}
+            hFather[hNOpenSet] = hCurrent
+          end
+        end
       end
     end
   end

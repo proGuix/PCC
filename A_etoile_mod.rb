@@ -82,25 +82,65 @@ module A_etoile
     return tPath
   end
 
-  class NaivePriorityQueue
+  class PriorityQueue
+    attr_reader :elements
+
     def initialize
-      @m_tE = []
+      @elements = [nil]
     end
-    def <<(e)
-      @m_tE << e
+
+    def <<(element)
+      @elements << element
+      bubble_up(@elements.size - 1)
     end
+
     def pop
-      @m_tE.sort!{|e1,e2| e1[:heuristic]<=>e2[:heuristic]}
-      @m_tE.delete_at(0)
+      exchange(1, @elements.size - 1)
+      min = @elements.pop
+      bubble_down(1)
+      min
     end
+
     def select(e)
-      return @m_tE.select{|e0|e0[:x]==e[:x]&&e0[:y]==e[:y]}[0]
+      return @elements.select{|e0| e0 != nil && e0[:x] == e[:x] && e0[:y] == e[:y]}[0]
     end
     def empty?
-      return @m_tE.empty?
+      return @elements.length == 1
+    end
+    
+    private
+
+    def bubble_up(index)
+      parent_index = (index) / 2
+
+      return if index <= 1
+      return if @elements[parent_index][:heuristic] <= @elements[index][:heuristic]
+
+      exchange(index, parent_index)
+      bubble_up(parent_index)
+    end
+
+    def bubble_down(index)
+      child_index = (index * 2)
+
+      return if child_index > @elements.size - 1
+
+      not_the_last_element = child_index < @elements.size - 1
+      left_element = @elements[child_index]
+      right_element = @elements[child_index + 1]
+      child_index += 1 if not_the_last_element && right_element[:heuristic] < left_element[:heuristic]
+
+      return if @elements[index][:heuristic] <= @elements[child_index][:heuristic]
+
+      exchange(index, child_index)
+      bubble_down(child_index)
+    end
+
+    def exchange(source, target)
+      @elements[source], @elements[target] = (t=@elements[target]) == nil ? nil : t.clone(), (s=@elements[source]) == nil ? nil : s.clone()
     end
   end
-
+  
   def segment2Array(tPt1, tPt2)
     tSeg2Ar=[]
     tPtI=[]
@@ -142,25 +182,18 @@ module A_etoile
     return tSeg2Ar
   end
 
-  def initGraph(hVectBord,tObstacle)
+  def initGraph(tObstacle)
     tGraph=[]
-    tBord=border(hVectBord)
-    tBord.each do |pt|
-      pt[:cost]=INF
-      pt[:heuristic]=INF
-    end
-    tGraph+=tBord
-    tGraph.uniq!
-    tObstacleCpy=tObstacle.clone
+    tObstacleCpy = tObstacle.clone
     tObstacleCpy.each do |pt|
-      hVertex=tGraph.select{|hPt|hPt[:x]==pt[:x]&&hPt[:y]==pt[:y]}[0]
-      if hVertex!=nil
-        hVertex[:cost]=INF
-        hVertex[:heuristic]=INF
+      hVertex = tGraph.select{|hPt| hPt[:x] == pt[:x] && hPt[:y] == pt[:y]}[0]
+      if hVertex != nil
+        hVertex[:cost] = INF
+        hVertex[:heuristic] = INF
       else
-        pt[:cost]=INF
-        pt[:heuristic]=INF
-        tGraph<< pt
+        pt[:cost] = INF
+        pt[:heuristic] = INF
+        tGraph << pt
       end
     end
     return tGraph
@@ -228,5 +261,44 @@ module A_etoile
       end
     end
     return false
+  end
+
+  def PosYByCorner(nPosY, sCorner, nHeight)
+    nPosYOut = 0
+    if sCorner == "LT"
+      nPosYOut = nPosY
+    elsif sCorner == "LB"
+      nPosYOut = nHeight - nPosY
+    end
+    return nPosYOut
+  end
+  
+  def IsAllDistanceMin(hVectBord, tObstacle, hStart, hFinish, hCurrent, nDistMin)
+    if distance(hCurrent, hFinish) <= nDistMin
+      return true
+    end
+    if hCurrent[:x] == hStart[:x] && hCurrent[:y] == hStart[:y]
+      return true
+    end
+    if hCurrent[:x] == hFinish[:x] && hCurrent[:y] == hFinish[:y]
+      return true
+    end
+    if hCurrent[:x] < nDistMin || hCurrent[:x] > hVectBord[:x] - nDistMin || hCurrent[:y] < nDistMin || hCurrent[:y] > hVectBord[:y] - nDistMin
+      return false
+    end
+    tObstacle.each do |pt|
+      if distance(pt, hCurrent) < nDistMin
+        return false
+      end
+    end
+    return true
+  end
+
+  def InflatePath(tPath, nCoefReduc)
+    tPathInflate = []
+    tPath.each do |pt|
+      tPathInflate << {x: pt[:x] * nCoefReduc, y: pt[:y] * nCoefReduc}
+    end
+    return tPathInflate
   end
 end
